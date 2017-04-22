@@ -1,0 +1,463 @@
+<div class="apidocDiv">
+<style>
+/*csslint
+*/
+.apidocDiv {
+    background: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.apidocDiv a[href] {
+    color: #33f;
+    font-weight: bold;
+    text-decoration: none;
+}
+.apidocDiv a[href]:hover {
+    text-decoration: underline;
+}
+.apidocCodeCommentSpan {
+    background: #bbf;
+    color: #000;
+    display: block;
+}
+.apidocCodeKeywordSpan {
+    color: #d00;
+    font-weight: bold;
+}
+.apidocCodePre {
+    background: #eef;
+    border: 1px solid;
+    color: #777;
+    padding: 5px;
+    white-space: pre-wrap;
+}
+.apidocFooterDiv {
+    margin-top: 20px;
+    text-align: center;
+}
+.apidocModuleLi {
+    margin-top: 10px;
+}
+.apidocSectionDiv {
+    border-top: 1px solid;
+    margin-top: 20px;
+}
+.apidocSignatureSpan {
+    color: #777;
+    font-weight: bold;
+}
+</style>
+<h1>api documentation for
+    <a
+
+        href="https://mths.be/he"
+
+    >he (v1.1.1)</a>
+</h1>
+<h4>A robust HTML entities encoder/decoder with full Unicode support.</h4>
+<div class="apidocSectionDiv"><a
+    href="#apidoc.tableOfContents"
+    id="apidoc.tableOfContents"
+><h1>table of contents</h1></a><ol>
+
+    <li class="apidocModuleLi"><a href="#apidoc.module.he">module he</a><ol>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.he.decode">
+            function <span class="apidocSignatureSpan">he.</span>decode
+            <span class="apidocSignatureSpan">(html, options)</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.he.encode">
+            function <span class="apidocSignatureSpan">he.</span>encode
+            <span class="apidocSignatureSpan">(string, options)</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.he.escape">
+            function <span class="apidocSignatureSpan">he.</span>escape
+            <span class="apidocSignatureSpan">(string)</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <a class="apidocElementLiA" href="#apidoc.element.he.unescape">
+            function <span class="apidocSignatureSpan">he.</span>unescape
+            <span class="apidocSignatureSpan">(html, options)</span>
+            </a>
+
+        </li>
+
+        <li>
+
+            <span class="apidocSignatureSpan">string <span class="apidocSignatureSpan">he.</span>version</span>
+
+        </li>
+
+    </ol></li>
+
+</ol></div>
+
+<div class="apidocSectionDiv">
+<h1><a href="#apidoc.module.he" id="apidoc.module.he">module he</a></h1>
+
+
+    <h2>
+        <a href="#apidoc.element.he.decode" id="apidoc.element.he.decode">
+        function <span class="apidocSignatureSpan">he.</span>decode
+        <span class="apidocSignatureSpan">(html, options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">decode = function (html, options) {
+		options = merge(options, decode.options);
+		var strict = options.strict;
+		if (strict &#x26;&#x26; regexInvalidEntity.test(html)) {
+			parseError(&#x27;malformed character reference&#x27;);
+		}
+		return html.replace(regexDecode, function($0, $1, $2, $3, $4, $5, $6, $7) {
+			var codePoint;
+			var semicolon;
+			var decDigits;
+			var hexDigits;
+			var reference;
+			var next;
+			if ($1) {
+				// Decode decimal escapes, e.g. `&#x26;#119558;`.
+				decDigits = $1;
+				semicolon = $2;
+				if (strict &#x26;&#x26; !semicolon) {
+					parseError(&#x27;character reference was not terminated by a semicolon&#x27;);
+				}
+				codePoint = parseInt(decDigits, 10);
+				return codePointToSymbol(codePoint, strict);
+			}
+			if ($3) {
+				// Decode hexadecimal escapes, e.g. `&#x26;#x1D306;`.
+				hexDigits = $3;
+				semicolon = $4;
+				if (strict &#x26;&#x26; !semicolon) {
+					parseError(&#x27;character reference was not terminated by a semicolon&#x27;);
+				}
+				codePoint = parseInt(hexDigits, 16);
+				return codePointToSymbol(codePoint, strict);
+			}
+			if ($5) {
+				// Decode named character references with trailing `;`, e.g. `&#x26;copy;`.
+				reference = $5;
+				if (has(decodeMap, reference)) {
+					return decodeMap[reference];
+				} else {
+					// Ambiguous ampersand. https://mths.be/notes/ambiguous-ampersands
+					if (strict) {
+						parseError(
+							&#x27;named character reference was not terminated by a semicolon&#x27;
+						);
+					}
+					return $0;
+				}
+			}
+			// If we’re still here, it’s a legacy reference for sure. No need for an
+			// extra `if` check.
+			// Decode named character references without trailing `;`, e.g. `&#x26;amp`
+			// This is only a parse error if it gets converted to `&#x26;`, or if it is
+			// followed by `=` in an attribute context.
+			reference = $6;
+			next = $7;
+			if (next &#x26;&#x26; options.isAttributeValue) {
+				if (strict &#x26;&#x26; next == &#x27;=&#x27;) {
+					parseError(&#x27;`&#x26;` did not start a character reference&#x27;);
+				}
+				return $0;
+			} else {
+				if (strict) {
+					parseError(
+						&#x27;named character reference was not terminated by a semicolon&#x27;
+					);
+				}
+				// Note: there is no need to check `has(decodeMapLegacy, reference)`.
+				return decodeMapLegacy[reference] + (next || &#x27;&#x27;);
+			}
+		});
+	}</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+he.encode.options.useNamedReferences = true;
+
+// Using the global default setting, which is now `true`:
+he.encode(&#x27;foo © bar ≠ baz 𝌆 qux&#x27;);
+// → &#x27;foo &#x26;copy; bar &#x26;ne; baz &#x26;#x1D306; qux&#x27;
+```
+
+### `he.<span class="apidocCodeKeywordSpan">decode</span>(html, options)`
+
+This function takes a string of HTML and decodes any named and numerical character references in it using [the algorithm described
+ in section 12.2.4.69 of the HTML spec](https://html.spec.whatwg.org/multipage/syntax.html#tokenizing-character-references).
+
+```js
+he.decode(&#x27;foo &#x26;copy; bar &#x26;ne; baz &#x26;#x1D306; qux&#x27;);
+// → &#x27;foo © bar ≠ baz 𝌆 qux&#x27;
+```
+...</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.he.encode" id="apidoc.element.he.encode">
+        function <span class="apidocSignatureSpan">he.</span>encode
+        <span class="apidocSignatureSpan">(string, options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">encode = function (string, options) {
+		options = merge(options, encode.options);
+		var strict = options.strict;
+		if (strict &#x26;&#x26; regexInvalidRawCodePoint.test(string)) {
+			parseError(&#x27;forbidden code point&#x27;);
+		}
+		var encodeEverything = options.encodeEverything;
+		var useNamedReferences = options.useNamedReferences;
+		var allowUnsafeSymbols = options.allowUnsafeSymbols;
+		var escapeCodePoint = options.decimal ? decEscape : hexEscape;
+
+		var escapeBmpSymbol = function(symbol) {
+			return escapeCodePoint(symbol.charCodeAt(0));
+		};
+
+		if (encodeEverything) {
+			// Encode ASCII symbols.
+			string = string.replace(regexAsciiWhitelist, function(symbol) {
+				// Use named references if requested &#x26; possible.
+				if (useNamedReferences &#x26;&#x26; has(encodeMap, symbol)) {
+					return &#x27;&#x26;&#x27; + encodeMap[symbol] + &#x27;;&#x27;;
+				}
+				return escapeBmpSymbol(symbol);
+			});
+			// Shorten a few escapes that represent two symbols, of which at least one
+			// is within the ASCII range.
+			if (useNamedReferences) {
+				string = string
+					.replace(/&#x26;gt;\u20D2/g, &#x27;&#x26;nvgt;&#x27;)
+					.replace(/&#x26;lt;\u20D2/g, &#x27;&#x26;nvlt;&#x27;)
+					.replace(/&#x26;#x66;&#x26;#x6A;/g, &#x27;&#x26;fjlig;&#x27;);
+			}
+			// Encode non-ASCII symbols.
+			if (useNamedReferences) {
+				// Encode non-ASCII symbols that can be replaced with a named reference.
+				string = string.replace(regexEncodeNonAscii, function(string) {
+					// Note: there is no need to check `has(encodeMap, string)` here.
+					return &#x27;&#x26;&#x27; + encodeMap[string] + &#x27;;&#x27;;
+				});
+			}
+			// Note: any remaining non-ASCII symbols are handled outside of the `if`.
+		} else if (useNamedReferences) {
+			// Apply named character references.
+			// Encode `&#x3c;&#x3e;&#x22;&#x27;&#x26;` using named character references.
+			if (!allowUnsafeSymbols) {
+				string = string.replace(regexEscape, function(string) {
+					return &#x27;&#x26;&#x27; + encodeMap[string] + &#x27;;&#x27;; // no need to check `has()` here
+				});
+			}
+			// Shorten escapes that represent two symbols, of which at least one is
+			// `&#x3c;&#x3e;&#x22;&#x27;&#x26;`.
+			string = string
+				.replace(/&#x26;gt;\u20D2/g, &#x27;&#x26;nvgt;&#x27;)
+				.replace(/&#x26;lt;\u20D2/g, &#x27;&#x26;nvlt;&#x27;);
+			// Encode non-ASCII symbols that can be replaced with a named reference.
+			string = string.replace(regexEncodeNonAscii, function(string) {
+				// Note: there is no need to check `has(encodeMap, string)` here.
+				return &#x27;&#x26;&#x27; + encodeMap[string] + &#x27;;&#x27;;
+			});
+		} else if (!allowUnsafeSymbols) {
+			// Encode `&#x3c;&#x3e;&#x22;&#x27;&#x26;` using hexadecimal escapes, now that they’re not handled
+			// using named character references.
+			string = string.replace(regexEscape, escapeBmpSymbol);
+		}
+		return string
+			// Encode astral symbols.
+			.replace(regexAstralSymbols, function($0) {
+				// https://mathiasbynens.be/notes/javascript-encoding#surrogate-formulae
+				var high = $0.charCodeAt(0);
+				var low = $0.charCodeAt(1);
+				var codePoint = (high - 0xD800) * 0x400 + low - 0xDC00 + 0x10000;
+				return escapeCodePoint(codePoint);
+			})
+			// Encode any remaining BMP symbols that are not printable ASCII symbols
+			// using a hexadecimal escape.
+			.replace(regexBmpWhitelist, escapeBmpSymbol);
+	}</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+
+## API
+
+### `he.version`
+
+A string representing the semantic version number.
+
+### `he.<span class="apidocCodeKeywordSpan">encode</span>(text, options)`
+
+This function takes a string of text and encodes (by default) any symbols that aren’t printable ASCII symbols and `&#x26;`, `&#x3c
+;`, `&#x3e;`, `&#x22;`, `&#x27;`, and `` ` ``, replacing them with character references.
+
+```js
+he.encode(&#x27;foo © bar ≠ baz 𝌆 qux&#x27;);
+// → &#x27;foo &#x26;#xA9; bar &#x26;#x2260; baz &#x26;#x1D306; qux&#x27;
+```
+...</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.he.escape" id="apidoc.element.he.escape">
+        function <span class="apidocSignatureSpan">he.</span>escape
+        <span class="apidocSignatureSpan">(string)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">escape = function (string) {
+		return string.replace(regexEscape, function($0) {
+			// Note: there is no need to check `has(escapeMap, $0)` here.
+			return escapeMap[$0];
+		});
+	}</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+he.decode.options.isAttributeValue = true;
+
+// Using the global default setting, which is now `true`:
+he.decode(&#x27;foo&#x26;ampbar&#x27;);
+// → &#x27;foo&#x26;ampbar&#x27;
+```
+
+### `he.<span class="apidocCodeKeywordSpan">escape</span>(text)`
+
+This function takes a string of text and escapes it for use in text contexts in XML or HTML documents. Only the following characters
+ are escaped: `&#x26;`, `&#x3c;`, `&#x3e;`, `&#x22;`, `&#x27;`, and `` ` ``.
+
+```js
+he.escape(&#x27;&#x3c;img src=\&#x27;x\&#x27; onerror=&#x22;prompt(1)&#x22;&#x3e;&#x27;);
+// → &#x27;&#x26;lt;img src=&#x26;#x27;x&#x26;#x27; onerror=&#x26;quot;prompt(1)&#x26;quot;&#x26;gt;&#x27;
+```
+...</pre></li>
+    </ul>
+
+
+
+    <h2>
+        <a href="#apidoc.element.he.unescape" id="apidoc.element.he.unescape">
+        function <span class="apidocSignatureSpan">he.</span>unescape
+        <span class="apidocSignatureSpan">(html, options)</span>
+        </a>
+    </h2>
+    <ul>
+    <li>description and source-code<pre class="apidocCodePre">unescape = function (html, options) {
+		options = merge(options, decode.options);
+		var strict = options.strict;
+		if (strict &#x26;&#x26; regexInvalidEntity.test(html)) {
+			parseError(&#x27;malformed character reference&#x27;);
+		}
+		return html.replace(regexDecode, function($0, $1, $2, $3, $4, $5, $6, $7) {
+			var codePoint;
+			var semicolon;
+			var decDigits;
+			var hexDigits;
+			var reference;
+			var next;
+			if ($1) {
+				// Decode decimal escapes, e.g. `&#x26;#119558;`.
+				decDigits = $1;
+				semicolon = $2;
+				if (strict &#x26;&#x26; !semicolon) {
+					parseError(&#x27;character reference was not terminated by a semicolon&#x27;);
+				}
+				codePoint = parseInt(decDigits, 10);
+				return codePointToSymbol(codePoint, strict);
+			}
+			if ($3) {
+				// Decode hexadecimal escapes, e.g. `&#x26;#x1D306;`.
+				hexDigits = $3;
+				semicolon = $4;
+				if (strict &#x26;&#x26; !semicolon) {
+					parseError(&#x27;character reference was not terminated by a semicolon&#x27;);
+				}
+				codePoint = parseInt(hexDigits, 16);
+				return codePointToSymbol(codePoint, strict);
+			}
+			if ($5) {
+				// Decode named character references with trailing `;`, e.g. `&#x26;copy;`.
+				reference = $5;
+				if (has(decodeMap, reference)) {
+					return decodeMap[reference];
+				} else {
+					// Ambiguous ampersand. https://mths.be/notes/ambiguous-ampersands
+					if (strict) {
+						parseError(
+							&#x27;named character reference was not terminated by a semicolon&#x27;
+						);
+					}
+					return $0;
+				}
+			}
+			// If we’re still here, it’s a legacy reference for sure. No need for an
+			// extra `if` check.
+			// Decode named character references without trailing `;`, e.g. `&#x26;amp`
+			// This is only a parse error if it gets converted to `&#x26;`, or if it is
+			// followed by `=` in an attribute context.
+			reference = $6;
+			next = $7;
+			if (next &#x26;&#x26; options.isAttributeValue) {
+				if (strict &#x26;&#x26; next == &#x27;=&#x27;) {
+					parseError(&#x27;`&#x26;` did not start a character reference&#x27;);
+				}
+				return $0;
+			} else {
+				if (strict) {
+					parseError(
+						&#x27;named character reference was not terminated by a semicolon&#x27;
+					);
+				}
+				// Note: there is no need to check `has(decodeMapLegacy, reference)`.
+				return decodeMapLegacy[reference] + (next || &#x27;&#x27;);
+			}
+		});
+	}</pre></li>
+    <li>example usage<pre class="apidocCodePre">...
+This function takes a string of text and escapes it for use in text contexts in XML or HTML documents. Only the following characters
+ are escaped: `&#x26;`, `&#x3c;`, `&#x3e;`, `&#x22;`, `&#x27;`, and `` ` ``.
+
+```js
+he.escape(&#x27;&#x3c;img src=\&#x27;x\&#x27; onerror=&#x22;prompt(1)&#x22;&#x3e;&#x27;);
+// → &#x27;&#x26;lt;img src=&#x26;#x27;x&#x26;#x27; onerror=&#x26;quot;prompt(1)&#x26;quot;&#x26;gt;&#x27;
+```
+
+### `he.<span class="apidocCodeKeywordSpan">unescape</span>(html, options)`
+
+`he.unescape` is an alias for `he.decode`. It takes a string of HTML and decodes any named and numerical character references in
+ it.
+
+### Using the `he` binary
+
+To use the `he` binary in your shell, simply install _he_ globally using npm:
+...</pre></li>
+    </ul>
+
+
+
+
+</div>
+
+<div class="apidocFooterDiv">
+    [ this document was created with
+    <a href="https://github.com/kaizhu256/node-utility2" target="_blank">utility2</a>
+    ]
+</div>
+</div>
